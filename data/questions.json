@@ -1,0 +1,77 @@
+[
+ {
+   "category": "Extraversion",
+   "questions": [
+     { "id": "EXT_1",  "text": "Am the life of the party.", "keyed": "plus" },
+     { "id": "EXT_2",  "text": "Don't talk a lot.", "keyed": "minus" },
+     { "id": "EXT_3",  "text": "Feel comfortable around people.", "keyed": "plus" },
+     { "id": "EXT_4",  "text": "Keep in the background.", "keyed": "minus" },
+     { "id": "EXT_5",  "text": "Start conversations.", "keyed": "plus" },
+     { "id": "EXT_6",  "text": "Have little to say.", "keyed": "minus" },
+     { "id": "EXT_7",  "text": "Talk to a lot of different people at parties.", "keyed": "plus" },
+     { "id": "EXT_8",  "text": "Don't like to draw attention to myself.", "keyed": "minus" },
+     { "id": "EXT_9",  "text": "Don't mind being the center of attention.", "keyed": "plus" },
+     { "id": "EXT_10", "text": "Am quiet around strangers.", "keyed": "minus" }
+   ]
+ },
+ {
+   "category": "Agreeableness",
+   "questions": [
+     { "id": "AGR_1",  "text": "Am interested in people.", "keyed": "plus" },
+     { "id": "AGR_2",  "text": "Am not interested in other people.", "keyed": "minus" },
+     { "id": "AGR_3",  "text": "Sympathize with others' feelings.", "keyed": "plus" },
+     { "id": "AGR_4",  "text": "Insult people.", "keyed": "minus" },
+     { "id": "AGR_5",  "text": "Have a soft heart.", "keyed": "plus" },
+     { "id": "AGR_6",  "text": "Am not interested in other people's problems.", "keyed": "minus" },
+     { "id": "AGR_7",  "text": "Take time out for others.", "keyed": "plus" },
+     { "id": "AGR_8",  "text": "Feel little concern for others.", "keyed": "minus" },
+     { "id": "AGR_9",  "text": "Feel others' emotions.", "keyed": "plus" },
+     { "id": "AGR_10", "text": "Am hard to get to know.", "keyed": "minus" }
+   ]
+ },
+ {
+   "category": "Conscientiousness",
+   "questions": [
+     { "id": "CSN_1",  "text": "Am always prepared.", "keyed": "plus" },
+     { "id": "CSN_2",  "text": "Leave my belongings around.", "keyed": "minus" },
+     { "id": "CSN_3",  "text": "Pay attention to details.", "keyed": "plus" },
+     { "id": "CSN_4",  "text": "Make a mess of things.", "keyed": "minus" },
+     { "id": "CSN_5",  "text": "Get chores done right away.", "keyed": "plus" },
+     { "id": "CSN_6",  "text": "Often forget to put things back in their proper place.", "keyed": "minus" },
+     { "id": "CSN_7",  "text": "Like order.", "keyed": "plus" },
+     { "id": "CSN_8",  "text": "Shirk my duties.", "keyed": "minus" },
+     { "id": "CSN_9",  "text": "Follow a schedule.", "keyed": "plus" },
+     { "id": "CSN_10", "text": "Am not really interested in order.", "keyed": "minus" }
+   ]
+ },
+ {
+   "category": "Neuroticism", 
+   "questions": [
+     { "id": "EST_1",  "text": "Get stressed out easily.", "keyed": "plus" },
+     { "id": "EST_2",  "text": "Am relaxed most of the time.", "keyed": "minus" },
+     { "id": "EST_3",  "text": "Worry about things.", "keyed": "plus" },
+     { "id": "EST_4",  "text": "Seldom feel blue.", "keyed": "minus" },
+     { "id": "EST_5",  "text": "Am easily disturbed.", "keyed": "plus" },
+     { "id": "EST_6",  "text": "Am generally calm.", "keyed": "minus" },
+     { "id": "EST_7",  "text": "Get upset easily.", "keyed": "plus" },
+     { "id": "EST_8",  "text": "Rarely lose my composure.", "keyed": "minus" },
+     { "id": "EST_9",  "text": "Change my mood a lot.", "keyed": "plus" },
+     { "id": "EST_10", "text": "Remain calm under pressure.", "keyed": "minus" }
+   ]
+ },
+ {
+   "category": "Openness",
+   "questions": [
+     { "id": "OPN_1",  "text": "Have a rich vocabulary.", "keyed": "plus" },
+     { "id": "OPN_2",  "text": "Have difficulty understanding abstract ideas.", "keyed": "minus" },
+     { "id": "OPN_3",  "text": "Have a vivid imagination.", "keyed": "plus" },
+     { "id": "OPN_4",  "text": "Am not interested in abstract ideas.", "keyed": "minus" },
+     { "id": "OPN_5",  "text": "Have excellent ideas.", "keyed": "plus" },
+     { "id": "OPN_6",  "text": "Do not have a good imagination.", "keyed": "minus" },
+     { "id": "OPN_7",  "text": "Spend time reflecting on things.", "keyed": "plus" },
+     { "id": "OPN_8",  "text": "Am not interested in art.", "keyed": "minus" },
+     { "id": "OPN_9",  "text": "Use difficult words.", "keyed": "plus" },
+     { "id": "OPN_10", "text": "Have little creativity.", "keyed": "minus" }
+   ]
+ }
+]
