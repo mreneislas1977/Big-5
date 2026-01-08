@@ -1,9 +1,5 @@
-// DELETE: const API_URL = "http://localhost:8000";
-
-// ADD THIS:
-// Replace the URL below with your ACTUAL Backend URL 
-// (e.g., your Render URL or Google Cloud Run URL)
-const API_URL = "https://big-five-api.onrender.com"; 
+// UPDATED: This now points to your Google Cloud Run Backend
+const API_URL = "https://eibigfive-642930760060.us-east4.run.app"; 
 
 export const submitSurvey = async (name, email, answers) => {
     const payload = {
