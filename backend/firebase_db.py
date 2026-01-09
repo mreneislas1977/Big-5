@@ -5,9 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- SAFE INITIALIZATION (Prevents Crash) ---
+# --- SAFE INITIALIZATION ---
 db = None
-
 try:
     if os.environ.get("FIREBASE_PRIVATE_KEY"):
         # Cloud Mode
@@ -27,30 +26,23 @@ try:
         firebase_admin.initialize_app(cred)
         db = firestore.client()
         print("SUCCESS: Connected to Firebase Database.")
-
     elif os.path.exists("serviceAccountKey.json"):
-        # Local Mode
         cred = credentials.Certificate("serviceAccountKey.json")
         firebase_admin.initialize_app(cred)
         db = firestore.client()
         print("SUCCESS: Connected to Firebase (Local).")
-        
     else:
         print("WARNING: No Database Credentials found. Running in OFFLINE MODE.")
-
 except Exception as e:
     print(f"WARNING: Database connection failed ({e}). Running in OFFLINE MODE.")
     db = None
 
-# --- DATABASE METHODS (Crash-Proof) ---
 class FirestoreDB:
-    
     @staticmethod
     def save_assessment(user_data, assessment_results, raw_answers):
         if db is None:
             print("OFFLINE MODE: Skipping database save.")
-            return "offline_dummy_id"
-
+            return "offline_id_123"
         try:
             doc_data = {
                 "user_info": user_data,
@@ -67,9 +59,7 @@ class FirestoreDB:
     @staticmethod
     def save_team(team_name, member_ids, team_analysis):
         if db is None:
-            print("OFFLINE MODE: Skipping team save.")
             return "offline_team_id"
-
         try:
             doc_data = {
                 "name": team_name,
@@ -80,7 +70,6 @@ class FirestoreDB:
             update_time, doc_ref = db.collection('teams').add(doc_data)
             return doc_ref.id
         except Exception as e:
-            print(f"Error saving team: {e}")
             return "error_team_id"
 
     @staticmethod
