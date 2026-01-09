@@ -2,7 +2,6 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 from dotenv import load_dotenv
-import datetime
 
 load_dotenv()
 
@@ -97,7 +96,7 @@ class FirestoreDB:
     @staticmethod
     def get_user_profile_id(doc_id):
         if db is None:
-            return 0 # Return a default profile ID (e.g., 0)
+            return 0 
             
         try:
             doc = db.collection('assessments').document(doc_id).get()
