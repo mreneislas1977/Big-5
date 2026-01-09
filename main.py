@@ -1,44 +1,29 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-[cite_start]from fastapi.staticfiles import StaticFiles # [cite: 1]
-from fastapi.responses import FileResponse
-import os
+# Stage 1: Build React Frontend
+FROM node:18 as build-step
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+# (Assuming output is /app/dist or /app/build)
 
-# Import your actual backend logic
-from backend.assessment import BigFiveAssessment
-from backend.team_engine import TeamAnalyzer
+# Stage 2: Python Backend
+FROM python:3.9-slim
 
-app = FastAPI()
+ENV PYTHONUNBUFFERED=1
+WORKDIR /app
 
-# 1. CORS Setup
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Copy Python requirements
+COPY requirements.txt .
+[cite_start]RUN pip install --no-cache-dir -r requirements.txt [cite: 3]
 
-# 2. API Endpoints (The missing link between web and logic)
-@app.post("/api/assess")
-async def run_assessment(answers: dict):
-    try:
-        assessor = BigFiveAssessment()
-        report = assessor.generate_full_report(answers)
-        return report
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Copy the Backend Code
+COPY backend ./backend
+COPY main.py .
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "modules_loaded": ["assessment", "team_engine"]}
+# Copy the built Frontend from Stage 1
+COPY --from=build-step /app/dist ./frontend/dist
 
-# 3. Serve Frontend (Must be last)
-# Check if the build directory exists before trying to mount it
-if os.path.exists("frontend/dist"):  # Ensure your React build outputs to 'dist' or 'build'
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
-else:
-    # Fallback if frontend isn't built yet
-    @app.get("/")
-    def read_root():
-        return {"status": "Backend running, but frontend build not found."}
+[cite_start]EXPOSE 8080 [cite: 4]
+
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
