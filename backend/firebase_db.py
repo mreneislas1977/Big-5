@@ -49,7 +49,7 @@ class FirestoreDB:
     def save_assessment(user_data, assessment_results, raw_answers):
         if db is None:
             print("OFFLINE MODE: Skipping database save.")
-            return "offline_id_123"
+            return "offline_dummy_id"
 
         try:
             doc_data = {
