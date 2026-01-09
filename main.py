@@ -1,40 +1,44 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+[cite_start]from fastapi.staticfiles import StaticFiles # [cite: 1]
+from fastapi.responses import FileResponse
+import os
+
+# Import your actual backend logic
+from backend.assessment import BigFiveAssessment
+from backend.team_engine import TeamAnalyzer
 
 app = FastAPI()
 
-# Allow connections from your dashboard
-origins = ["*"]
-
+# 1. CORS Setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root():
-    return """
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Big 5 Executive Assessment</title>
-            <style>
-                body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-                .status { background-color: #dcfce7; color: #166534; padding: 10px 20px; border-radius: 20px; font-weight: bold; display: inline-block;}
-            </style>
-        </head>
-        <body>
-            <h1>Big 5 Executive Profile</h1>
-            <div class="status">System Operational</div>
-            <p>Ready to connect to frontend.</p>
-        </body>
-    </html>
-    """
+# 2. API Endpoints (The missing link between web and logic)
+@app.post("/api/assess")
+async def run_assessment(answers: dict):
+    try:
+        assessor = BigFiveAssessment()
+        report = assessor.generate_full_report(answers)
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "modules_loaded": ["assessment", "team_engine"]}
+
+# 3. Serve Frontend (Must be last)
+# Check if the build directory exists before trying to mount it
+if os.path.exists("frontend/dist"):  # Ensure your React build outputs to 'dist' or 'build'
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+else:
+    # Fallback if frontend isn't built yet
+    @app.get("/")
+    def read_root():
+        return {"status": "Backend running, but frontend build not found."}
