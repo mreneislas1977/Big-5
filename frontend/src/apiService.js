@@ -3,8 +3,10 @@
 // Relative path works for both Localhost and Cloud Run
 const API_URL = "/api"; 
 
-// --- 1. The Function Your Test Button Needs ---
+// --- 1. The Function Your Test Button Needs (Test Mode) ---
 export const submitAnswers = async (answers) => {
+    // We wrap the simple answers in the full payload the backend expects.
+    // We use "Test User" so the backend validation passes without a real form.
     const payload = {
         name: "Test User",
         email: "test@example.com",
@@ -13,7 +15,7 @@ export const submitAnswers = async (answers) => {
 
     console.log("Sending payload to backend:", payload);
 
-    // FIX: Changed from '/submit' to '/assess' to match main.py
+    // CORRECTED: Points to /assess to match main.py
     const response = await fetch(`${API_URL}/assess`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,7 +31,7 @@ export const submitAnswers = async (answers) => {
     return await response.json();
 };
 
-// --- 2. The Future Function for the Real Survey ---
+// --- 2. The Future Function for the Real Survey (Production Mode) ---
 export const submitSurvey = async (name, email, answers) => {
     const payload = {
         name: name,
@@ -37,7 +39,7 @@ export const submitSurvey = async (name, email, answers) => {
         answers: answers
     };
 
-    // FIX: Changed from '/submit' to '/assess' to match main.py
+    // CORRECTED: Points to /assess to match main.py
     const response = await fetch(`${API_URL}/assess`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,12 +50,14 @@ export const submitSurvey = async (name, email, answers) => {
     return await response.json();
 };
 
+// --- 3. The Function for Team Analysis ---
 export const createTeam = async (teamName, userIds) => {
     const payload = {
         team_name: teamName,
         member_doc_ids: userIds
     };
 
+    // Points to /team to match main.py
     const response = await fetch(`${API_URL}/team`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
