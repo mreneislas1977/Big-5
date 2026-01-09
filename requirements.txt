@@ -1,8 +1,8 @@
 fastapi
 uvicorn
 pydantic
-firebase-admin
-fpdf2
-matplotlib
-numpy
 python-dotenv
+firebase-admin
+numpy
+matplotlib
+fpdf
