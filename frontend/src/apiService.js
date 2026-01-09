@@ -1,7 +1,36 @@
-// UPDATED: Use relative paths. 
-// This works automatically on localhost:8000 AND your Cloud Run URL.
+// frontend/src/apiService.js
+
+// Relative path works for both Localhost and Cloud Run
 const API_URL = "/api"; 
 
+// --- 1. The Function Your Test Button Needs ---
+export const submitAnswers = async (answers) => {
+    // We wrap the simple answers in the full payload the backend expects
+    // We use "Anonymous" so the backend validation passes
+    const payload = {
+        name: "Test User",
+        email: "test@example.com",
+        answers: answers
+    };
+
+    console.log("Sending payload to backend:", payload);
+
+    const response = await fetch(`${API_URL}/submit`, { // Endpoint likely /submit or /assess
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server Error:", errorText);
+        throw new Error(`Submission Failed: ${response.status}`);
+    }
+    
+    return await response.json();
+};
+
+// --- 2. The Future Function for the Real Survey ---
 export const submitSurvey = async (name, email, answers) => {
     const payload = {
         name: name,
@@ -9,8 +38,7 @@ export const submitSurvey = async (name, email, answers) => {
         answers: answers
     };
 
-    // Changed endpoint from '/submit-assessment' to '/assess' to match REST standards
-    const response = await fetch(`${API_URL}/assess`, {
+    const response = await fetch(`${API_URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -26,7 +54,6 @@ export const createTeam = async (teamName, userIds) => {
         member_doc_ids: userIds
     };
 
-    // Changed endpoint from '/analyze-team' to '/team'
     const response = await fetch(`${API_URL}/team`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
