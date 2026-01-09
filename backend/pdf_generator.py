@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # <--- CRITICAL FIX FOR DOCKER
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 from datetime import datetime
