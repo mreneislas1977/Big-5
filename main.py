@@ -1,107 +1,95 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 import os
-import firebase_admin
-from firebase_admin import credentials, firestore
-from dotenv import load_dotenv
+import traceback # Added for debugging
 
-load_dotenv()
+# Import backend logic
+from backend.assessment import BigFiveAssessment
+from backend.team_engine import TeamAnalyzer
+from backend.firebase_db import FirestoreDB
 
-# --- SAFE INITIALIZATION ---
-db = None
+app = FastAPI()
 
-try:
-    if os.environ.get("FIREBASE_PRIVATE_KEY"):
-        # Cloud Mode
-        cred_dict = {
-            "type": "service_account",
-            "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
-            "private_key_id": os.environ.get("FIREBASE_PRIVATE_KEY_ID"),
-            "private_key": os.environ.get("FIREBASE_PRIVATE_KEY").replace('\\n', '\n'),
-            "client_email": os.environ.get("FIREBASE_CLIENT_EMAIL"),
-            "client_id": os.environ.get("FIREBASE_CLIENT_ID"),
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": os.environ.get("FIREBASE_CLIENT_CERT_URL")
-        }
-        cred = credentials.Certificate(cred_dict)
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        print("SUCCESS: Connected to Firebase Database.")
+# Input Models
+class AssessmentRequest(BaseModel):
+    name: str
+    email: str
+    answers: dict
 
-    elif os.path.exists("serviceAccountKey.json"):
-        # Local Mode
-        cred = credentials.Certificate("serviceAccountKey.json")
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        print("SUCCESS: Connected to Firebase (Local).")
+class TeamRequest(BaseModel):
+    team_name: str
+    member_doc_ids: list
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- API ENDPOINTS ---
+
+@app.post("/api/assess")
+async def run_assessment(payload: AssessmentRequest):
+    # --- DEBUG WRAPPER START ---
+    try:
+        print(f"Received assessment request for: {payload.email}")
         
-    else:
-        print("WARNING: No Database Credentials found. Running in OFFLINE MODE.")
+        # 1. Initialize Logic
+        assessor = BigFiveAssessment()
+        
+        # 2. Generate Report
+        report = assessor.generate_full_report(payload.answers)
+        
+        # 3. Save to DB (Safe Mode handles the crash if offline)
+        doc_id = FirestoreDB.save_assessment(
+            {"name": payload.name, "email": payload.email},
+            report, 
+            payload.answers
+        )
+        
+        return {"id": doc_id, "report": report}
 
-except Exception as e:
-    print(f"WARNING: Database connection failed ({e}). Running in OFFLINE MODE.")
-    db = None
+    except Exception as e:
+        # If ANYTHING crashes, we catch it here and send it to the browser
+        error_details = traceback.format_exc()
+        print(f"CRASH DETECTED: {error_details}")
+        # Return a 200 OK with the error details so the frontend can see it
+        return {
+            "error": "Backend Crash",
+            "message": str(e),
+            "traceback": error_details
+        }
+    # --- DEBUG WRAPPER END ---
 
-# --- DATABASE METHODS (Now Crash-Proof) ---
-class FirestoreDB:
-    
-    @staticmethod
-    def save_assessment(user_data, assessment_results, raw_answers):
-        if db is None:
-            print("OFFLINE MODE: Skipping database save.")
-            return "dummy_offline_id_123"
+@app.post("/api/team")
+async def analyze_team(payload: TeamRequest):
+    try:
+        analyzer = TeamAnalyzer()
+        profile_ids = []
+        for doc_id in payload.member_doc_ids:
+            pid = FirestoreDB.get_user_profile_id(doc_id)
+            if pid:
+                profile_ids.append(pid)
+        
+        charter = analyzer.generate_team_charter(profile_ids)
+        team_id = FirestoreDB.save_team(payload.team_name, payload.member_doc_ids, charter)
+        return {"team_id": team_id, "charter": charter}
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-        try:
-            doc_data = {
-                "user_info": {
-                    "name": user_data.get('name'),
-                    "email": user_data.get('email')
-                },
-                "profile": {
-                    "id": assessment_results['profile_id'],
-                    "archetype": assessment_results['archetype'],
-                    "scores": assessment_results['scores'],
-                    "description": assessment_results['description'],
-                    "recommendation": assessment_results['recommendation']
-                },
-                "raw_answers": raw_answers,
-                "created_at": firestore.SERVER_TIMESTAMP
-            }
-            update_time, doc_ref = db.collection('assessments').add(doc_data)
-            return doc_ref.id
-        except Exception as e:
-            print(f"Error saving to DB: {e}")
-            return "error_saving_id"
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
 
-    @staticmethod
-    def save_team(team_name, member_ids, team_analysis):
-        if db is None:
-            print("OFFLINE MODE: Skipping team save.")
-            return "dummy_team_id_123"
-
-        try:
-            doc_data = {
-                "name": team_name,
-                "members": member_ids,
-                "dna": team_analysis['team_fingerprint'],
-                "operating_principles": team_analysis['operating_principles'],
-                "created_at": firestore.SERVER_TIMESTAMP
-            }
-            update_time, doc_ref = db.collection('teams').add(doc_data)
-            return doc_ref.id
-        except Exception as e:
-            print(f"Error saving team: {e}")
-            return "error_saving_team"
-
-    @staticmethod
-    def get_user_profile_id(doc_id):
-        if db is None:
-            return 0 
-            
-        try:
-            doc = db.collection('assessments').document(doc_id).get()
-            if doc.exists:
-                return doc.to_dict()['profile']['id']
-        except Exception as e:
-            print(f"Error fetching profile: {e}")
-        return None
+# --- SERVE FRONTEND ---
+if os.path.exists("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+else:
+    @app.get("/")
+    def read_root():
+        return {"status": "Backend running. Frontend build not found."}
