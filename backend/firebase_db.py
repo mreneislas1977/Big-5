@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- SAFE INITIALIZATION ---
+# --- SAFE INITIALIZATION (Prevents Crash) ---
 db = None
 
 try:
@@ -42,28 +42,19 @@ except Exception as e:
     print(f"WARNING: Database connection failed ({e}). Running in OFFLINE MODE.")
     db = None
 
-# --- DATABASE METHODS (Now Crash-Proof) ---
+# --- DATABASE METHODS (Crash-Proof) ---
 class FirestoreDB:
     
     @staticmethod
     def save_assessment(user_data, assessment_results, raw_answers):
         if db is None:
             print("OFFLINE MODE: Skipping database save.")
-            return "dummy_offline_id_123"
+            return "offline_id_123"
 
         try:
             doc_data = {
-                "user_info": {
-                    "name": user_data.get('name'),
-                    "email": user_data.get('email')
-                },
-                "profile": {
-                    "id": assessment_results['profile_id'],
-                    "archetype": assessment_results['archetype'],
-                    "scores": assessment_results['scores'],
-                    "description": assessment_results['description'],
-                    "recommendation": assessment_results['recommendation']
-                },
+                "user_info": user_data,
+                "profile": assessment_results,
                 "raw_answers": raw_answers,
                 "created_at": firestore.SERVER_TIMESTAMP
             }
@@ -71,37 +62,32 @@ class FirestoreDB:
             return doc_ref.id
         except Exception as e:
             print(f"Error saving to DB: {e}")
-            return "error_saving_id"
+            return "error_id"
 
     @staticmethod
     def save_team(team_name, member_ids, team_analysis):
         if db is None:
             print("OFFLINE MODE: Skipping team save.")
-            return "dummy_team_id_123"
+            return "offline_team_id"
 
         try:
             doc_data = {
                 "name": team_name,
                 "members": member_ids,
-                "dna": team_analysis['team_fingerprint'],
-                "operating_principles": team_analysis['operating_principles'],
+                "dna": team_analysis,
                 "created_at": firestore.SERVER_TIMESTAMP
             }
             update_time, doc_ref = db.collection('teams').add(doc_data)
             return doc_ref.id
         except Exception as e:
             print(f"Error saving team: {e}")
-            return "error_saving_team"
+            return "error_team_id"
 
     @staticmethod
     def get_user_profile_id(doc_id):
-        if db is None:
-            return 0 
-            
+        if db is None: return 0
         try:
             doc = db.collection('assessments').document(doc_id).get()
-            if doc.exists:
-                return doc.to_dict()['profile']['id']
-        except Exception as e:
-            print(f"Error fetching profile: {e}")
+            if doc.exists: return doc.to_dict()['profile']['id']
+        except: return None
         return None
