@@ -1,5 +1,6 @@
-// UPDATED: This now points to your Google Cloud Run Backend
-const API_URL = "https://eibigfive-642930760060.us-east4.run.app"; 
+// UPDATED: Use relative paths. 
+// This works automatically on localhost:8000 AND your Cloud Run URL.
+const API_URL = "/api"; 
 
 export const submitSurvey = async (name, email, answers) => {
     const payload = {
@@ -8,7 +9,8 @@ export const submitSurvey = async (name, email, answers) => {
         answers: answers
     };
 
-    const response = await fetch(`${API_URL}/submit-assessment`, {
+    // Changed endpoint from '/submit-assessment' to '/assess' to match REST standards
+    const response = await fetch(`${API_URL}/assess`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -24,7 +26,8 @@ export const createTeam = async (teamName, userIds) => {
         member_doc_ids: userIds
     };
 
-    const response = await fetch(`${API_URL}/analyze-team`, {
+    // Changed endpoint from '/analyze-team' to '/team'
+    const response = await fetch(`${API_URL}/team`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
