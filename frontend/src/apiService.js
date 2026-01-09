@@ -5,8 +5,6 @@ const API_URL = "/api";
 
 // --- 1. The Function Your Test Button Needs ---
 export const submitAnswers = async (answers) => {
-    // We wrap the simple answers in the full payload the backend expects
-    // We use "Anonymous" so the backend validation passes
     const payload = {
         name: "Test User",
         email: "test@example.com",
@@ -15,7 +13,8 @@ export const submitAnswers = async (answers) => {
 
     console.log("Sending payload to backend:", payload);
 
-    const response = await fetch(`${API_URL}/submit`, { // Endpoint likely /submit or /assess
+    // FIX: Changed from '/submit' to '/assess' to match main.py
+    const response = await fetch(`${API_URL}/assess`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -38,7 +37,8 @@ export const submitSurvey = async (name, email, answers) => {
         answers: answers
     };
 
-    const response = await fetch(`${API_URL}/submit`, {
+    // FIX: Changed from '/submit' to '/assess' to match main.py
+    const response = await fetch(`${API_URL}/assess`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
