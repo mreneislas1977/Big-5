@@ -2,7 +2,6 @@
 FROM node:18 as build-step
 WORKDIR /app
 COPY frontend/package*.json ./
-# Use the package.json we just created
 COPY frontend/ ./frontend/ 
 WORKDIR /app/frontend
 RUN npm install
@@ -21,7 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend ./backend
 COPY main.py .
 COPY data ./data 
-# (Ensure data folder is copied so profiles.json can be read)
 
 # Copy the built Frontend from Stage 1
 COPY --from=build-step /app/frontend/dist ./frontend/dist
