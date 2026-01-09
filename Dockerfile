@@ -1,22 +1,30 @@
-# Use Python as the base image
+# Stage 1: Build React Frontend
+FROM node:18 as build-step
+WORKDIR /app
+COPY frontend/package*.json ./
+# Use the package.json we just created
+COPY frontend/ ./frontend/ 
+WORKDIR /app/frontend
+RUN npm install
+RUN npm run build
+
+# Stage 2: Python Backend
 FROM python:3.9-slim
-
-# ESSENTIAL: Ensures logs are flushed immediately to Cloud Logging
 ENV PYTHONUNBUFFERED=1
-
-# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
-COPY . .
+# Copy Backend Code
+COPY backend ./backend
+COPY main.py .
+COPY data ./data 
+# (Ensure data folder is copied so profiles.json can be read)
 
-# Expose the port (Documentary only, helpful for local viewing)
+# Copy the built Frontend from Stage 1
+COPY --from=build-step /app/frontend/dist ./frontend/dist
+
 EXPOSE 8080
-
-# Start the application
-# Using shell form to support the $PORT environment variable if Cloud Run changes it
 CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
