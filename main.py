@@ -1,14 +1,20 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+import traceback
 import os
-import traceback # Added for debugging
 
-# Import backend logic
-from backend.assessment import BigFiveAssessment
-from backend.team_engine import TeamAnalyzer
-from backend.firebase_db import FirestoreDB
+# --- IMPORT BACKEND ---
+# We wrap imports in try/except to catch missing library errors
+try:
+    from backend.assessment import BigFiveAssessment
+    from backend.team_engine import TeamAnalyzer
+    from backend.firebase_db import FirestoreDB
+except Exception as e:
+    print(f"IMPORT ERROR: {e}")
+    traceback.print_exc()
 
 app = FastAPI()
 
@@ -30,21 +36,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- API ENDPOINTS ---
-
+# --- DEBUG API ENDPOINT ---
 @app.post("/api/assess")
 async def run_assessment(payload: AssessmentRequest):
-    # --- DEBUG WRAPPER START ---
+    print(f"DEBUG: Received request for {payload.email}")
+    
     try:
-        print(f"Received assessment request for: {payload.email}")
-        
-        # 1. Initialize Logic
+        # 1. Test File Access (Common Crash Cause)
+        if not os.path.exists("data/profiles.json"):
+            raise FileNotFoundError("CRITICAL: 'data/profiles.json' is missing from the container!")
+            
+        # 2. Run Assessment
         assessor = BigFiveAssessment()
-        
-        # 2. Generate Report
         report = assessor.generate_full_report(payload.answers)
         
-        # 3. Save to DB (Safe Mode handles the crash if offline)
+        # 3. Save to DB
         doc_id = FirestoreDB.save_assessment(
             {"name": payload.name, "email": payload.email},
             report, 
@@ -54,33 +60,27 @@ async def run_assessment(payload: AssessmentRequest):
         return {"id": doc_id, "report": report}
 
     except Exception as e:
-        # If ANYTHING crashes, we catch it here and send it to the browser
-        error_details = traceback.format_exc()
-        print(f"CRASH DETECTED: {error_details}")
-        # Return a 200 OK with the error details so the frontend can see it
-        return {
-            "error": "Backend Crash",
-            "message": str(e),
-            "traceback": error_details
-        }
-    # --- DEBUG WRAPPER END ---
+        # CATCH THE CRASH
+        error_msg = str(e)
+        detailed_trace = traceback.format_exc()
+        print(f"CRASH CAUGHT: {error_msg}")
+        
+        # Send 200 OK so the frontend displays the error instead of 'Submission Failed'
+        return JSONResponse(
+            status_code=200, 
+            content={
+                "report": {
+                    "archetype": "SYSTEM ERROR",
+                    "description": f"The server crashed with this error: {error_msg}",
+                    "recommendation": "Please show this message to your developer.",
+                    "scores": {"EXT":0, "AGR":0, "CSN":0, "EST":0, "OPN":0}
+                }
+            }
+        )
 
 @app.post("/api/team")
 async def analyze_team(payload: TeamRequest):
-    try:
-        analyzer = TeamAnalyzer()
-        profile_ids = []
-        for doc_id in payload.member_doc_ids:
-            pid = FirestoreDB.get_user_profile_id(doc_id)
-            if pid:
-                profile_ids.append(pid)
-        
-        charter = analyzer.generate_team_charter(profile_ids)
-        team_id = FirestoreDB.save_team(payload.team_name, payload.member_doc_ids, charter)
-        return {"team_id": team_id, "charter": charter}
-    except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "Team endpoints disabled in debug mode"}
 
 @app.get("/health")
 def health_check():
