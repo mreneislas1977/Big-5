@@ -1,104 +1,72 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-import traceback
-import os
 import json
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 
-# --- IMPORT BACKEND ---
-try:
-    from backend.assessment import BigFiveAssessment
-    from backend.team_engine import TeamAnalyzer
-    from backend.firebase_db import FirestoreDB
-except Exception as e:
-    print(f"IMPORT ERROR: {e}")
-    traceback.print_exc()
+# --- 1. NEW: Import Firestore ---
+from google.cloud import firestore
 
 app = FastAPI()
 
-# Input Models
-class AssessmentRequest(BaseModel):
+# --- 2. NEW: Initialize Database ---
+# (Google Cloud automatically handles authentication)
+try:
+    db = firestore.Client()
+except Exception as e:
+    print(f"Warning: Firestore not connected. {e}")
+    db = None
+
+# Load Questions & Profiles
+with open("data/questions.json", "r") as f:
+    questions_data = json.load(f)
+
+with open("data/profiles.json", "r") as f:
+    profiles_data = json.load(f)
+
+from backend.assessment import calculate_big5_scores, determine_archetype
+
+class SurveyResponse(BaseModel):
     name: str
     email: str
-    answers: dict
+    answers: Dict[str, int]
 
-class TeamRequest(BaseModel):
-    team_name: str
-    member_doc_ids: list
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# --- NEW ENDPOINT: SERVE QUESTIONS ---
 @app.get("/api/questions")
 def get_questions():
-    try:
-        if os.path.exists("data/questions.json"):
-            with open("data/questions.json", "r") as f:
-                return json.load(f)
-        return {"error": "questions.json not found"}
-    except Exception as e:
-        return {"error": str(e)}
+    return questions_data
 
-# --- DEBUG API ENDPOINT ---
-@app.post("/api/assess")
-async def run_assessment(payload: AssessmentRequest):
-    print(f"DEBUG: Received request for {payload.email}")
+@app.post("/api/submit")
+def submit_survey(response: SurveyResponse):
+    # 1. Calculate Scores
+    scores = calculate_big5_scores(response.answers)
     
-    try:
-        # 1. Test File Access
-        if not os.path.exists("data/profiles.json"):
-            raise FileNotFoundError("CRITICAL: 'data/profiles.json' is missing!")
-            
-        # 2. Run Assessment
-        assessor = BigFiveAssessment()
-        report = assessor.generate_full_report(payload.answers)
-        
-        # 3. Save to DB
-        doc_id = FirestoreDB.save_assessment(
-            {"name": payload.name, "email": payload.email},
-            report, 
-            payload.answers
-        )
-        
-        return {"id": doc_id, "report": report}
+    # 2. Determine Archetype
+    archetype_result = determine_archetype(scores, profiles_data)
+    
+    # 3. Create the Record
+    user_record = {
+        "name": response.name,
+        "email": response.email,
+        "scores": scores,
+        "archetype": archetype_result["archetype"],
+        "timestamp": firestore.SERVER_TIMESTAMP
+    }
 
-    except Exception as e:
-        error_msg = str(e)
-        detailed_trace = traceback.format_exc()
-        print(f"CRASH CAUGHT: {error_msg}")
-        
-        return JSONResponse(
-            status_code=200, 
-            content={
-                "report": {
-                    "archetype": "SYSTEM ERROR",
-                    "description": f"The server crashed: {error_msg}",
-                    "recommendation": "Please show this to your developer.",
-                    "scores": {"EXT":0, "AGR":0, "CSN":0, "EST":0, "OPN":0}
-                }
-            }
-        )
+    # --- 4. NEW: Save to Firestore ---
+    if db:
+        try:
+            # Save to a collection named 'assessments'
+            db.collection("assessments").add(user_record)
+            print(f"Saved result for {response.email}")
+        except Exception as e:
+            print(f"Failed to save to Firestore: {e}")
 
-@app.post("/api/team")
-async def analyze_team(payload: TeamRequest):
-    return {"status": "Team endpoints disabled in debug mode"}
+    return {
+        "status": "success",
+        "report": archetype_result
+    }
 
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
-
-# --- SERVE FRONTEND ---
-if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
-else:
-    @app.get("/")
-    def read_root():
-        return {"status": "Backend running. Frontend build not found."}
+# Serve Frontend
+app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
