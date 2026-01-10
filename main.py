@@ -5,9 +5,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import traceback
 import os
+import json
 
 # --- IMPORT BACKEND ---
-# We wrap imports in try/except to catch missing library errors
 try:
     from backend.assessment import BigFiveAssessment
     from backend.team_engine import TeamAnalyzer
@@ -36,15 +36,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- NEW ENDPOINT: SERVE QUESTIONS ---
+@app.get("/api/questions")
+def get_questions():
+    try:
+        if os.path.exists("data/questions.json"):
+            with open("data/questions.json", "r") as f:
+                return json.load(f)
+        return {"error": "questions.json not found"}
+    except Exception as e:
+        return {"error": str(e)}
+
 # --- DEBUG API ENDPOINT ---
 @app.post("/api/assess")
 async def run_assessment(payload: AssessmentRequest):
     print(f"DEBUG: Received request for {payload.email}")
     
     try:
-        # 1. Test File Access (Common Crash Cause)
+        # 1. Test File Access
         if not os.path.exists("data/profiles.json"):
-            raise FileNotFoundError("CRITICAL: 'data/profiles.json' is missing from the container!")
+            raise FileNotFoundError("CRITICAL: 'data/profiles.json' is missing!")
             
         # 2. Run Assessment
         assessor = BigFiveAssessment()
@@ -60,19 +71,17 @@ async def run_assessment(payload: AssessmentRequest):
         return {"id": doc_id, "report": report}
 
     except Exception as e:
-        # CATCH THE CRASH
         error_msg = str(e)
         detailed_trace = traceback.format_exc()
         print(f"CRASH CAUGHT: {error_msg}")
         
-        # Send 200 OK so the frontend displays the error instead of 'Submission Failed'
         return JSONResponse(
             status_code=200, 
             content={
                 "report": {
                     "archetype": "SYSTEM ERROR",
-                    "description": f"The server crashed with this error: {error_msg}",
-                    "recommendation": "Please show this message to your developer.",
+                    "description": f"The server crashed: {error_msg}",
+                    "recommendation": "Please show this to your developer.",
                     "scores": {"EXT":0, "AGR":0, "CSN":0, "EST":0, "OPN":0}
                 }
             }
