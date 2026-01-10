@@ -3,34 +3,31 @@ import { submitSurvey } from './apiService';
 import BigFiveChart from './BigFiveChart';
 
 const AssessmentView = () => {
+   // --- STATE MANAGEMENT ---
    const [status, setStatus] = useState("loading_questions");
    const [questions, setQuestions] = useState([]);
    const [answers, setAnswers] = useState({});
    const [report, setReport] = useState(null);
    const [userData, setUserData] = useState({ name: "", email: "" });
 
-   // 1. Fetch Questions on Load
+   // --- 1. FETCH QUESTIONS ON LOAD ---
    useEffect(() => {
      fetch('/api/questions')
        .then(res => res.json())
        .then(data => {
          if (Array.isArray(data)) {
-           // Flatten the categories into a single list of questions
+           // Flatten the categories to get a simple list of questions
            const flatList = data.flatMap(cat => cat.questions);
            setQuestions(flatList);
            setStatus("idle");
          } else {
-           console.error("Invalid question format", data);
            setStatus("error");
          }
        })
-       .catch(err => {
-         console.error(err);
-         setStatus("error");
-       });
+       .catch(() => setStatus("error"));
    }, []);
 
-   // 2. Handle Inputs
+   // --- 2. HANDLE INPUTS ---
    const handleAnswerChange = (qId, value) => {
      setAnswers(prev => ({ ...prev, [qId]: parseInt(value) }));
    };
@@ -43,100 +40,144 @@ const AssessmentView = () => {
          setReport(result.report);
          setStatus("done");
      } catch (error) {
-         console.error(error);
+         console.error("Submission failed:", error);
          setStatus("error");
      }
    };
 
-   // 3. Render: Report View
+   // --- 3. SUB-COMPONENT: HEADER ---
+   const PortalHeader = () => (
+     <div className="portal-header">
+       <div className="portal-logo">CRESCERE <span>STRATEGY</span></div>
+     </div>
+   );
+
+   // --- VIEW: RESULTS (DASHBOARD) ---
    if (status === "done" && report) {
        return (
-           <div style={{ padding: 40, maxWidth: 800, margin: '0 auto', fontFamily: 'sans-serif' }}>
-               <h1 style={{color: '#333'}}>Archetype: {report.archetype}</h1>
-               <p style={{fontSize: '1.2rem', lineHeight: '1.6'}}>{report.description}</p>
-               
-               <div style={{ maxWidth: 500, margin: '40px auto' }}>
-                   <BigFiveChart scores={report.scores} />
+           <>
+             <PortalHeader />
+             <div className="container">
+               <div className="card">
+                   <h1>{report.archetype}</h1>
+                   <p className="subtitle">{report.description}</p>
+                   
+                   {/* CHART SECTION */}
+                   <div style={{ maxWidth: 500, margin: '40px auto' }}>
+                       <BigFiveChart scores={report.scores} />
+                   </div>
+                   
+                   {/* RECOMMENDATION BOX */}
+                   <div style={{
+                       background: '#F9FAFB', 
+                       padding: '30px', 
+                       borderRadius: '8px', 
+                       textAlign: 'left',
+                       borderLeft: '5px solid #800020' /* Burgundy Accent */
+                   }}>
+                     <h3 style={{ margin: '0 0 10px 0', color: '#014421' }}>Executive Recommendation</h3>
+                     <p style={{ margin: 0, color: '#5c4033', lineHeight: '1.6' }}>
+                        {report.recommendation}
+                     </p>
+                   </div>
+                   
+                   {/* RESTART BUTTON */}
+                   <button 
+                     onClick={() => window.location.reload()}
+                     style={{
+                       marginTop: 30, 
+                       background: 'transparent', 
+                       border: '2px solid #014421', 
+                       color: '#014421',
+                       padding: '12px 24px',
+                       borderRadius: '6px',
+                       cursor: 'pointer',
+                       fontWeight: '600',
+                       fontSize: '1rem'
+                     }}
+                   >
+                     Restart Assessment
+                   </button>
                </div>
-               
-               <div style={{backgroundColor: '#f0f9ff', padding: 20, borderRadius: 8}}>
-                 <h3>🚀 Growth Tip:</h3>
-                 <p style={{ color: "#0066cc", fontWeight: 'bold' }}>{report.recommendation}</p>
-               </div>
-               
-               <button onClick={() => window.location.reload()} style={{marginTop: 30, padding: '10px 20px'}}>
-                 Take Test Again
-               </button>
-           </div>
+             </div>
+           </>
        );
    }
 
-   // 4. Render: Loading / Error
-   if (status === "loading_questions") return <div style={{padding:20}}>Loading Assessment...</div>;
-   if (status === "error") return <div style={{padding:20, color: 'red'}}>Error loading system. Please refresh.</div>;
+   // --- VIEW: LOADING / ERROR ---
+   if (status === "loading_questions") return <div style={{padding:40, textAlign:'center', color:'#014421'}}>Loading Portal...</div>;
+   if (status === "error") return <div style={{padding:40, textAlign:'center', color:'#800020'}}>System Error. Please check your connection and refresh.</div>;
 
-   // 5. Render: Questionnaire Form
+   // --- VIEW: INTAKE FORM ---
    return (
-       <div style={{ padding: 40, maxWidth: 700, margin: '0 auto', fontFamily: 'sans-serif' }}>
-           <h1>Big Five Assessment</h1>
-           <p style={{marginBottom: 30}}>Rate yourself from 1 (Disagree) to 5 (Agree).</p>
-           
-           <form onSubmit={handleSubmit}>
-             <div style={{marginBottom: 20, display: 'flex', gap: 10}}>
-               <input 
-                 type="text" 
-                 placeholder="Your Name" 
-                 required 
-                 style={{padding: 8, flex: 1}}
-                 onChange={e => setUserData({...userData, name: e.target.value})}
-               />
-               <input 
-                 type="email" 
-                 placeholder="Your Email" 
-                 required 
-                 style={{padding: 8, flex: 1}}
-                 onChange={e => setUserData({...userData, email: e.target.value})}
-               />
-             </div>
-
-             {questions.map((q) => (
-               <div key={q.id} style={{ marginBottom: 15, padding: 15, backgroundColor: '#f9f9f9', borderRadius: 5 }}>
-                 <p style={{margin: '0 0 10px 0', fontWeight: 500}}>{q.text}</p>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', maxWidth: 300 }}>
-                   {[1, 2, 3, 4, 5].map(val => (
-                     <label key={val} style={{cursor: 'pointer'}}>
-                       <input 
-                         type="radio" 
-                         name={q.id} 
-                         value={val} 
-                         required
-                         onChange={() => handleAnswerChange(q.id, val)}
-                       />
-                       <br/><span style={{fontSize: 12, color: '#666'}}>{val}</span>
-                     </label>
-                   ))}
+       <>
+         <PortalHeader />
+         <div className="container">
+           <div className="card">
+               <h1>Executive Insights Assessment</h1>
+               <p className="subtitle">
+                 Discover your leadership archetype and how your personality traits shape your strategic decision-making.
+               </p>
+               
+               <form onSubmit={handleSubmit}>
+                 {/* USER DETAILS */}
+                 <div className="form-grid">
+                   <div>
+                     <label style={{display:'block', marginBottom:8, fontWeight:600, fontSize:14}}>Full Name</label>
+                     <input 
+                       type="text" 
+                       placeholder="e.g. Jane Doe" 
+                       required 
+                       onChange={e => setUserData({...userData, name: e.target.value})}
+                     />
+                   </div>
+                   <div>
+                     <label style={{display:'block', marginBottom:8, fontWeight:600, fontSize:14}}>Work Email</label>
+                     <input 
+                       type="email" 
+                       placeholder="e.g. jane@company.com" 
+                       required 
+                       onChange={e => setUserData({...userData, email: e.target.value})}
+                     />
+                   </div>
                  </div>
-               </div>
-             ))}
 
-             <button 
-               type="submit" 
-               disabled={status === "processing"}
-               style={{
-                 padding: '15px 30px', 
-                 fontSize: 18, 
-                 backgroundColor: '#007bff', 
-                 color: 'white', 
-                 border: 'none', 
-                 borderRadius: 5, 
-                 cursor: 'pointer',
-                 marginTop: 20
-               }}
-             >
-               {status === "processing" ? "Analyzing Profile..." : "Submit Assessment"}
-             </button>
-           </form>
-       </div>
+                 <div style={{textAlign:'left', marginBottom:20, borderBottom:'2px solid #eee', paddingBottom:10}}>
+                    <strong style={{fontSize:14, color:'#014421'}}>INSTRUCTIONS:</strong>
+                    <span style={{fontSize:14, color:'#5c4033', marginLeft:8}}>
+                        Rate how well each statement describes you (1 = Disagree, 5 = Agree).
+                    </span>
+                 </div>
+
+                 {/* QUESTIONS LOOP */}
+                 {questions.map((q) => (
+                   <div key={q.id} className="question-row">
+                     <span className="question-text">{q.text}</span>
+                     <div className="scale-options">
+                       {[1, 2, 3, 4, 5].map(val => (
+                         <label key={val} className="radio-circle">
+                           <input 
+                             type="radio" 
+                             name={q.id} 
+                             value={val} 
+                             required
+                             onChange={() => handleAnswerChange(q.id, val)}
+                           />
+                           <span>{val}</span>
+                         </label>
+                       ))}
+                     </div>
+                   </div>
+                 ))}
+
+                 {/* SUBMIT BUTTON */}
+                 <button type="submit" className="btn-submit" disabled={status === "processing"}>
+                   {status === "processing" ? "Analyzing Profile..." : "Generate Executive Report"}
+                 </button>
+               </form>
+           </div>
+         </div>
+       </>
    );
 };
 
