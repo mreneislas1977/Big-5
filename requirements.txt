@@ -2,7 +2,8 @@ fastapi
 uvicorn
 pydantic
 python-dotenv
-firebase-admin
 numpy
 matplotlib
 fpdf
+google-cloud-firestore
+firebase-admin
