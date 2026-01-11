@@ -42,7 +42,7 @@ body {
 }
 
 .portal-logo span {
-  color: #d4af37; /* Kept a generic gold for the word "STRATEGY" so it pops against green, or use var(--brand-bg) for cream */
+  color: #d4af37; /* Kept a generic gold/tan to pop against the green header */
 }
 
 /* --- 3. MAIN LAYOUT --- */
@@ -58,7 +58,7 @@ body {
   padding: 50px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
   text-align: center;
-  border-top: 5px solid var(--brand-secondary); /* Burgundy Line */
+  border-top: 5px solid var(--brand-secondary); /* Burgundy Top Line */
 }
 
 /* --- 4. TYPOGRAPHY --- */
@@ -161,7 +161,7 @@ input:focus {
 }
 
 .btn-submit:hover {
-  background-color: #013319; /* Slightly darker green */
+  background-color: #013319; /* Slightly darker green on hover */
   transform: translateY(-1px);
 }
 
