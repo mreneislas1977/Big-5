@@ -1,68 +1,94 @@
 import json
 import os
 
-class BigFiveAssessment:
-    def __init__(self):
-        # 1. Define Logic
-        # CORRECTED SCORING KEY: EST logic is now inverted to match questions.json
-        self.scoring_key = {
-            "EXT": {"+": [1, 3, 5, 7, 9], "-": [2, 4, 6, 8, 10]}, 
-            "EST": {"+": [2, 4, 6, 8, 10], "-": [1, 3, 5, 7, 9]}, # <--- FLIPPED (Evens are +, Odds are -)
-            "AGR": {"+": [1, 3, 5, 7, 9], "-": [2, 4, 6, 8, 10]}, 
-            "CSN": {"+": [1, 3, 5, 7, 9], "-": [2, 4, 6, 8, 10]}, 
-            "OPN": {"+": [1, 3, 5, 7, 9], "-": [2, 4, 6, 8, 10]}, 
-        }
-        self.bit_map = {"OPN": 16, "CSN": 8, "EXT": 4, "AGR": 2, "EST": 1}
-        self.profiles = {}
+def calculate_big5_scores(answers):
+    """
+    Calculates the average score (1-5) for each of the Big 5 traits.
+    Expects 'answers' to be a dict like {'q1': 5, 'q2': 3, ...}
+    """
+    # 1. Load Question Data to know which question belongs to which trait
+    # We try to load from the file, or fall back to defaults if missing.
+    try:
+        path = os.path.join(os.getcwd(), 'data', 'questions.json')
+        with open(path, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Error loading questions for scoring: {e}")
+        return {"error": "scoring_config_missing"}
 
-        # 2. Try to load Data SAFELY
-        try:
-            current_dir = os.path.dirname(__file__)
-            # Construct path to ../data/profiles.json
-            data_path = os.path.join(current_dir, '../data/profiles.json')
-            
-            if os.path.exists(data_path):
-                with open(data_path, 'r') as f:
-                    self.profiles = json.load(f)
-                print(f"SUCCESS: Loaded {len(self.profiles)} profiles.")
-            else:
-                print(f"WARNING: profiles.json not found at {data_path}. Using empty profiles.")
-                
-        except Exception as e:
-            print(f"ERROR loading profiles: {e}")
-            self.profiles = {}
+    # 2. Initialize scores
+    scores = {
+        "openness": [],
+        "conscientiousness": [],
+        "extraversion": [],
+        "agreeableness": [],
+        "stability": []
+    }
 
-    def calculate_score(self, trait, user_responses):
-        score = 0
-        try:
-            for q_id in self.scoring_key[trait]["+"]:
-                score += user_responses.get(f"{trait}_{q_id}", 3)
-            for q_id in self.scoring_key[trait]["-"]:
-                val = user_responses.get(f"{trait}_{q_id}", 3)
-                score += (6 - val)
-            return round(((score - 10) / 40) * 100, 1)
-        except Exception as e:
-            print(f"Math Error on {trait}: {e}")
-            return 50.0
+    # 3. Map answers to categories
+    # The JSON structure is [{"id": "openness", "questions": [...]}, ...]
+    for category in data:
+        trait_id = category["id"] # e.g. "openness"
+        for q in category["questions"]:
+            qid = q["id"] # e.g. "q1"
+            if qid in answers:
+                try:
+                    val = int(answers[qid])
+                    scores[trait_id].append(val)
+                except ValueError:
+                    continue # Skip invalid inputs
+    
+    # 4. Calculate Averages
+    final_scores = {}
+    for trait, values in scores.items():
+        if len(values) > 0:
+            final_scores[trait] = round(sum(values) / len(values), 2)
+        else:
+            final_scores[trait] = 0 # Default if no questions answered for this trait
 
-    def generate_full_report(self, user_responses):
-        scores = {}
-        profile_id = 0
-        
-        # Calculate Scores
-        for trait in ["EXT", "EST", "AGR", "CSN", "OPN"]:
-            val = self.calculate_score(trait, user_responses)
-            scores[trait] = val
-            if val > 50:
-                profile_id += self.bit_map[trait]
+    return final_scores
 
-        # Get Profile
-        profile_data = self.profiles.get(str(profile_id), {})
+def determine_archetype(scores, profiles):
+    """
+    Matches the calculated scores against the profiles.json to find the best fit.
+    """
+    best_match = None
+    min_diff = float('inf')
 
+    # If scores is invalid (empty), return default
+    if not scores or "error" in scores:
         return {
-            "scores": scores,
-            "profile_id": profile_id,
-            "archetype": profile_data.get("name", "Unknown Archetype"),
-            "description": profile_data.get("description", "Could not load profile."),
-            "recommendation": profile_data.get("happiness_tip", "No recommendation available.")
+            "archetype": "Assessment Incomplete",
+            "description": "We could not generate a valid score from your answers.",
+            "recommendation": "Please try taking the assessment again."
         }
+
+    for profile in profiles:
+        # Calculate total difference between user scores and this profile's ideal scores
+        # We assume standard Euclidean distance or simple absolute difference
+        diff = 0
+        profile_scores = profile.get("scores", {})
+        
+        for trait, value in scores.items():
+            # Get the profile's expected value for this trait (default to 3 if missing)
+            target = profile_scores.get(trait, 3) 
+            diff += abs(value - target)
+        
+        if diff < min_diff:
+            min_diff = diff
+            best_match = profile
+
+    if best_match:
+        return {
+            "archetype": best_match["name"],
+            "description": best_match["description"],
+            "recommendation": best_match["recommendation"],
+            "scores": scores
+        }
+    
+    return {
+        "archetype": "The Generalist",
+        "description": "Your leadership style is balanced across all traits.",
+        "recommendation": "Focus on adapting your style to the specific needs of your team.",
+        "scores": scores
+    }

@@ -13,8 +13,8 @@ export const submitAnswers = async (answers) => {
 
     console.log("Sending payload to backend:", payload);
 
-    // FIX: This now correctly points to "/assess"
-    const response = await fetch(`${API_URL}/assess`, { 
+    // FIX: Changed from "/submit" to "/submit" to match main.py
+    const response = await fetch(`${API_URL}/submit`, { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -36,8 +36,8 @@ export const submitSurvey = async (name, email, answers) => {
         answers: answers
     };
 
-    // FIX: This also points to "/assess"
-    const response = await fetch(`${API_URL}/assess`, {
+    // FIX: Changed from "/submit" to "/submit" to match main.py
+    const response = await fetch(`${API_URL}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
