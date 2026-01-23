@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-pydantic
-google-cloud-firestore
-firebase-admin
-python-dotenv
-fpdf
-matplotlib
-numpy
