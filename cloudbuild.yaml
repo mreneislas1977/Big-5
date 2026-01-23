@@ -1,3 +1,4 @@
+cat > cloudbuild.yaml << 'EOF'
 steps:
   # 1. Install Dependencies
   - name: 'node:20'
@@ -11,17 +12,17 @@ steps:
     env:
       - 'VITE_API_URL=https://big-5-app-398236087799.us-central1.run.app' 
 
-  # 3. Deploy to Cloud Run
+  # 3. Deploy to Cloud Run (Source-based)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
       - 'run'
       - 'deploy'
       - 'big-5-app'
-      - '--image=gcr.io/$PROJECT_ID/big-5-app:$COMMIT_SHA'
       - '--source=.'
       - '--region=us-central1'
       - '--allow-unauthenticated'
 
 options:
   logging: CLOUD_LOGGING_ONLY
+EOF
